@@ -64,6 +64,15 @@ async function initDb() {
     premium_expiry INTEGER,
     login_count INTEGER NOT NULL DEFAULT 0,
     last_login INTEGER,
+    office TEXT,
+    is_office_admin INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS tess_offices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    created_by INTEGER,
     created_at INTEGER NOT NULL
   )`);
   exec(`CREATE TABLE IF NOT EXISTS tess_activity_log (
@@ -216,10 +225,93 @@ function getMyMetrics(userId) {
   };
 }
 
+function updateUserOffice(userId, office) {
+  exec('UPDATE tess_users SET office=? WHERE id=?', [office, userId]);
+  save();
+}
+
+function getUsersByOffice(office) {
+  if (!office || office === 'all') return getAllUsers();
+  return query('SELECT * FROM tess_users WHERE office=? ORDER BY created_at DESC', [office]);
+}
+
+function getMetricsByOffice(office) {
+  let users = [];
+  if (office && office !== 'all') {
+    users = query('SELECT id FROM tess_users WHERE office=?', [office]).map(u => u.id);
+  } else {
+    users = query('SELECT id FROM tess_users').map(u => u.id);
+  }
+  if (users.length === 0) return { users: { total: 0, active: 0, demo: 0, premium: 0, developers: 0 }, today: {}, month: {} };
+  const userIds = users.join(',');
+  const today = new Date().toISOString().slice(0, 10);
+  const month = new Date().toISOString().slice(0, 7);
+  const total = users.length;
+  const active = queryOne(`SELECT COUNT(*) as c FROM tess_users WHERE id IN (${userIds}) AND last_login > ?`, [Date.now() - 86400000]).c;
+  const demo = queryOne(`SELECT COUNT(*) as c FROM tess_users WHERE id IN (${userIds}) AND role='demo'`).c;
+  const premium = queryOne(`SELECT COUNT(*) as c FROM tess_users WHERE id IN (${userIds}) AND role='premium'`).c;
+  const devs = queryOne(`SELECT COUNT(*) as c FROM tess_users WHERE id IN (${userIds}) AND role='developer'`).c;
+  const t = queryOne(`SELECT SUM(icebreakers) as icebreakers, SUM(likes) as likes, SUM(follows) as follows, SUM(cartas) as cartas, SUM(sweeps) as sweeps, SUM(ids_captured) as ids_captured FROM tess_metrics_daily WHERE date=? AND user_id IN (${userIds})`, [today]) || {};
+  const m = queryOne(`SELECT SUM(icebreakers) as icebreakers, SUM(likes) as likes, SUM(follows) as follows, SUM(cartas) as cartas, SUM(sweeps) as sweeps, SUM(ids_captured) as ids_captured FROM tess_metrics_monthly WHERE month=? AND user_id IN (${userIds})`, [month]) || {};
+  return {
+    users: { total, active, demo, premium, developers: devs },
+    today: { icebreakers: t.icebreakers || 0, likes: t.likes || 0, follows: t.follows || 0, cartas: t.cartas || 0, sweeps: t.sweeps || 0, ids_captured: t.ids_captured || 0 },
+    month: { icebreakers: m.icebreakers || 0, likes: m.likes || 0, follows: m.follows || 0, cartas: m.cartas || 0, sweeps: m.sweeps || 0, ids_captured: m.ids_captured || 0 }
+  };
+}
+
+function getActivityByOffice(office, limit) {
+  let users = [];
+  if (office && office !== 'all') {
+    users = query('SELECT id FROM tess_users WHERE office=?', [office]).map(u => u.id);
+  }
+  if (users.length === 0) return getRecentActivity(limit);
+  const userIds = users.map(String).join(',');
+  return query(`SELECT * FROM tess_activity_log WHERE user_id IN (${userIds}) ORDER BY created_at DESC LIMIT ?`, [limit]);
+}
+
+function createOffice(name, createdByUserId) {
+  const existing = queryOne('SELECT id FROM tess_offices WHERE name=?', [name]);
+  if (existing) return null;
+  const now = Date.now();
+  exec('INSERT INTO tess_offices (name, created_by, created_at) VALUES (?, ?, ?)', [name, createdByUserId, now]);
+  save();
+  return queryOne('SELECT id FROM tess_offices WHERE name=?', [name]).id;
+}
+
+function getAllOffices() {
+  return query('SELECT * FROM tess_offices ORDER BY created_at DESC');
+}
+
+function deleteOffice(name) {
+  const users = query('SELECT id FROM tess_users WHERE office=?', [name]);
+  users.forEach(u => exec('UPDATE tess_users SET office=NULL, is_office_admin=0 WHERE id=?', [u.id]));
+  exec('DELETE FROM tess_offices WHERE name=?', [name]);
+  save();
+}
+
+function setUserOfficeAdmin(userId, isAdmin) {
+  exec('UPDATE tess_users SET is_office_admin=? WHERE id=?', [isAdmin ? 1 : 0, userId]);
+  save();
+}
+
+function getUserOffice(userId) {
+  const user = findUserById(userId);
+  return user?.office || null;
+}
+
+function isUserOfficeAdmin(userId) {
+  const user = findUserById(userId);
+  return user?.is_office_admin === 1;
+}
+
 module.exports = {
   initDb, findUserByEmail, findUserById, createUser, updateLoginStats,
   updateUserPremium, setUserBan, setUserDeveloper, updateUserPassword, setUserCustomPlan,
   getAllUsers, logActivity, getRecentActivity,
   upsertDailyMetric, upsertMonthlyMetric, insertCollectedId,
-  getMetricsOverview, getMyMetrics
+  getMetricsOverview, getMyMetrics,
+  updateUserOffice, getUsersByOffice, getMetricsByOffice, getActivityByOffice,
+  createOffice, getAllOffices, deleteOffice, setUserOfficeAdmin,
+  getUserOffice, isUserOfficeAdmin
 };

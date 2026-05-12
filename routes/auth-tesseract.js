@@ -35,13 +35,30 @@ router.post('/api/tess/auth/login', (req, res) => {
   const sub = computeSub(user, now);
   const token = generateToken(user.id);
   logActivity(user.id, email, 'Inicio de sesión');
-  res.json({ token, user: { email: user.email, role: sub.status, isAdmin: !!user.is_admin, isDeveloper: !!user.is_developer, subscription: sub } });
+  res.json({ token, user: { 
+    email: user.email, 
+    role: sub.status, 
+    isAdmin: !!user.is_admin, 
+    isDeveloper: !!user.is_developer,
+    isOfficeAdmin: !!user.is_office_admin,
+    office: user.office || null,
+    subscription: sub 
+  } });
 });
 
 // GET /api/tess/auth/verify
 router.get('/api/tess/auth/verify', validateToken, (req, res) => {
   const sub = computeSub(req.user, Date.now());
-  res.json({ valid: true, email: req.user.email, role: sub.status, isAdmin: !!req.user.is_admin, isDeveloper: !!req.user.is_developer, subscription: sub });
+  res.json({ 
+    valid: true, 
+    email: req.user.email, 
+    role: sub.status, 
+    isAdmin: !!req.user.is_admin, 
+    isDeveloper: !!req.user.is_developer,
+    isOfficeAdmin: !!req.user.is_office_admin,
+    office: req.user.office || null,
+    subscription: sub 
+  });
 });
 
 // GET /api/tess/auth/users
