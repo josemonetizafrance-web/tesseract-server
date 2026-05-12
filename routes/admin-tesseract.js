@@ -3,7 +3,7 @@
  */
 const { Router } = require('express');
 const bcrypt = require('bcryptjs');
-const { findUserByEmail, findUserById, updateUserPremium, setUserBan, setUserDeveloper, updateUserPassword, setUserCustomPlan, logActivity, getRecentActivity, getMetricsOverview, createUser, updateUserOffice, getUsersByOffice, getMetricsByOffice, getActivityByOffice, getAllUsers, createOffice, getAllOffices, deleteOffice, setUserOfficeAdmin } = require('../db/tesseract.js');
+const { findUserByEmail, findUserById, updateUserPremium, setUserBan, setUserDeveloper, updateUserPassword, setUserCustomPlan, logActivity, getRecentActivity, getMetricsOverview, createUser, updateUserOffice, getUsersByOffice, getMetricsByOffice, getActivityByOffice, getAllUsers, createOffice, getAllOffices, deleteOffice, setUserOfficeAdmin, query } = require('../db/tesseract.js');
 const { validateToken, requireTesseractAdmin, requireMasterAdmin } = require('../middleware/auth-tesseract.js');
 
 const router = Router();
@@ -43,7 +43,7 @@ router.post('/api/tess/admin/set-office-admin', requireTesseractAdmin, (req, res
 
 // Crear nuevo usuario
 router.post('/api/tess/admin/create-user', requireTesseractAdmin, (req, res) => {
-  const { email, password, office } = req.body;
+  const { email, password, office, userType } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
   if (!email.endsWith('@tesseract.com')) return res.status(400).json({ error: 'Solo correos @tesseract.com' });
   if (!password.endsWith('*+')) return res.status(400).json({ error: 'La contraseña debe terminar en *+' });
@@ -60,7 +60,12 @@ router.post('/api/tess/admin/create-user', requireTesseractAdmin, (req, res) => 
     updateUserOffice(userId, office);
   }
   
-  logActivity(req.user.id, req.user.email, `Usuario creado: ${email}${office ? ' (oficina: ' + office + ')' : ''}`);
+  if (userType === 'admin') {
+    setUserOfficeAdmin(userId, true);
+  }
+  
+  const typeLabel = userType === 'admin' ? 'ADMIN DE OFICINA' : 'OPERADOR';
+  logActivity(req.user.id, req.user.email, `Usuario creado: ${email} (${typeLabel})${office ? ' - ' + office : ''}`);
   res.json({ success: true, userId });
 });
 
@@ -105,6 +110,61 @@ router.get('/api/tess/admin/offices', requireTesseractAdmin, (req, res) => {
   const users = getAllUsers();
   const offices = [...new Set(users.filter(u => u.office).map(u => u.office))];
   res.json({ offices });
+});
+
+// Obtener métricas diarias por oficina (calendario)
+router.get('/api/tess/admin/metrics-daily', requireTesseractAdmin, (req, res) => {
+  const office = req.query.office;
+  const days = parseInt(req.query.days) || 30;
+  
+  let users = [];
+  if (office && office !== 'all') {
+    users = query('SELECT id FROM tess_users WHERE office=?', [office]).map(u => u.id);
+  } else {
+    users = query('SELECT id FROM tess_users').map(u => u.id);
+  }
+  
+  if (users.length === 0) {
+    return res.json({ dailyMetrics: [] });
+  }
+  
+  const userIds = users.join(',');
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  const startDateStr = startDate.toISOString().slice(0, 10);
+  
+  const metrics = query(`
+    SELECT date, SUM(icebreakers) as saludos, SUM(likes) as likes, SUM(follows) as follows, SUM(cartas) as cartas
+    FROM tess_metrics_daily 
+    WHERE user_id IN (${userIds}) AND date >= ?
+    GROUP BY date
+    ORDER BY date DESC
+  `, [startDateStr]);
+  
+  res.json({ dailyMetrics: metrics });
+});
+
+// Obtener métricas por usuario específico
+router.get('/api/tess/admin/metrics-by-user', requireTesseractAdmin, (req, res) => {
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'Email requerido' });
+  
+  const user = findUserByEmail(email);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  
+  const days = parseInt(req.query.days) || 30;
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  const startDateStr = startDate.toISOString().slice(0, 10);
+  
+  const metrics = query(`
+    SELECT date, icebreakers, likes, follows, cartas
+    FROM tess_metrics_daily 
+    WHERE user_id = ? AND date >= ?
+    ORDER BY date DESC
+  `, [user.id, startDateStr]);
+  
+  res.json({ userMetrics: metrics });
 });
 
 router.post('/api/tess/admin/premium', requireTesseractAdmin, (req, res) => {

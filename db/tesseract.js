@@ -80,9 +80,20 @@ async function initDb() {
     user_id INTEGER,
     email TEXT,
     action TEXT NOT NULL,
+    action_type TEXT,
     details TEXT,
     created_at INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES tess_users(id) ON DELETE SET NULL
+  )`);
+
+  exec(`CREATE TABLE IF NOT EXISTS tess_user_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    start_time INTEGER NOT NULL,
+    end_time INTEGER,
+    duration_ms INTEGER DEFAULT 0,
+    date TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES tess_users(id) ON DELETE CASCADE
   )`);
   exec(`CREATE TABLE IF NOT EXISTS tess_metrics_daily (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,10 +171,13 @@ function getAllUsers() {
   return query('SELECT id, email, role, is_admin, is_developer, is_banned, login_count, last_login, created_at, demo_expiry, premium_expiry FROM tess_users ORDER BY created_at DESC');
 }
 
-function logActivity(userId, email, action, details = null) { exec('INSERT INTO tess_activity_log (user_id, email, action, details, created_at) VALUES (?, ?, ?, ?, ?)', [userId, email, action, details, Date.now()]); save(); }
+function logActivity(userId, email, action, actionType = null, details = null) { 
+  exec('INSERT INTO tess_activity_log (user_id, email, action, action_type, details, created_at) VALUES (?, ?, ?, ?, ?, ?)', [userId, email, action, actionType, details, Date.now()]); 
+  save(); 
+}
 
 function getRecentActivity(limit = 100) {
-  return query('SELECT email, action, details, created_at FROM tess_activity_log ORDER BY created_at DESC LIMIT ?', [limit]);
+  return query('SELECT email, action, action_type, details, created_at FROM tess_activity_log ORDER BY created_at DESC LIMIT ?', [limit]);
 }
 
 function upsertDailyMetric(userId, date, stats, now) {
@@ -305,6 +319,42 @@ function isUserOfficeAdmin(userId) {
   return user?.is_office_admin === 1;
 }
 
+function startSession(userId) {
+  const now = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+  exec('INSERT INTO tess_user_sessions (user_id, start_time, date) VALUES (?, ?, ?)', [userId, now, today]);
+  save();
+  return queryOne('SELECT id FROM tess_user_sessions WHERE user_id=? AND end_time IS NULL ORDER BY id DESC', [userId])?.id;
+}
+
+function endSession(userId, sessionId) {
+  const now = Date.now();
+  const session = queryOne('SELECT start_time FROM tess_user_sessions WHERE id=?', [sessionId]);
+  if (session) {
+    const duration = now - session.start_time;
+    exec('UPDATE tess_user_sessions SET end_time=?, duration_ms=? WHERE id=?', [now, duration, sessionId]);
+    save();
+  }
+}
+
+function getUserSessions(userId, limit = 10) {
+  return query('SELECT * FROM tess_user_sessions WHERE user_id=? ORDER BY start_time DESC LIMIT ?', [userId, limit]);
+}
+
+function getTotalTimeByUser(userId) {
+  const result = queryOne('SELECT SUM(duration_ms) as total FROM tess_user_sessions WHERE user_id=?', [userId]);
+  return result?.total || 0;
+}
+
+function getTotalTimeByOffice(office) {
+  if (!office) return 0;
+  const users = query('SELECT id FROM tess_users WHERE office=?', [office]).map(u => u.id);
+  if (!users.length) return 0;
+  const ids = users.join(',');
+  const result = queryOne(`SELECT SUM(duration_ms) as total FROM tess_user_sessions WHERE user_id IN (${ids})`);
+  return result?.total || 0;
+}
+
 module.exports = {
   initDb, findUserByEmail, findUserById, createUser, updateLoginStats,
   updateUserPremium, setUserBan, setUserDeveloper, updateUserPassword, setUserCustomPlan,
@@ -313,5 +363,6 @@ module.exports = {
   getMetricsOverview, getMyMetrics,
   updateUserOffice, getUsersByOffice, getMetricsByOffice, getActivityByOffice,
   createOffice, getAllOffices, deleteOffice, setUserOfficeAdmin,
-  getUserOffice, isUserOfficeAdmin
+  getUserOffice, isUserOfficeAdmin,
+  startSession, endSession, getUserSessions, getTotalTimeByUser
 };
