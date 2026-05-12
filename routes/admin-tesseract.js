@@ -116,13 +116,6 @@ router.get('/api/tess/admin/activity-log', requireTesseractAdmin, (req, res) => 
   res.json({ logs });
 });
 
-// Obtener lista de oficinas únicas
-router.get('/api/tess/admin/offices', requireTesseractAdmin, (req, res) => {
-  const users = getAllUsers();
-  const offices = [...new Set(users.filter(u => u.office).map(u => u.office))];
-  res.json({ offices });
-});
-
 // Obtener métricas diarias por oficina (calendario)
 router.get('/api/tess/admin/metrics-daily', requireTesseractAdmin, (req, res) => {
   try {
@@ -253,14 +246,6 @@ router.post('/api/tess/admin/set-plan', requireTesseractAdmin, (req, res) => {
   setUserCustomPlan(user.id, plan);
   logActivity(req.user.id, req.user.email, `Plan "${plan}" asignado a ${email}`);
   res.json({ success: true });
-});
-
-router.get('/api/tess/admin/activity-log', requireTesseractAdmin, (req, res) => {
-  res.json({ logs: getRecentActivity(parseInt(req.query.limit) || 100) });
-});
-
-router.get('/api/tess/admin/metrics', requireTesseractAdmin, (req, res) => {
-  res.json(getMetricsOverview());
 });
 
 module.exports = router;
