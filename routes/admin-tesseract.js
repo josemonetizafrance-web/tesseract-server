@@ -13,12 +13,18 @@ router.use('/api/tess/admin', validateToken);
 
 // Rutas de oficinas (cualquier admin)
 router.post('/api/tess/admin/create-office', requireTesseractAdmin, (req, res) => {
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: 'Nombre de oficina requerido' });
-  const id = createOffice(name, req.user.id);
-  if (!id) return res.status(400).json({ error: 'La oficina ya existe' });
-  logActivity(req.user.id, req.user.email, `Oficina creada: ${name}`);
-  res.json({ success: true, officeId: id });
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nombre de oficina requerido' });
+    console.log('[CREATE-OFFICE] user:', req.user.email, 'id:', req.user.id);
+    const id = createOffice(name, req.user.id);
+    if (!id) return res.status(400).json({ error: 'La oficina ya existe' });
+    logActivity(req.user.id, req.user.email, `Oficina creada: ${name}`);
+    res.json({ success: true, officeId: id });
+  } catch (err) {
+    console.error('[CREATE-OFFICE] Error:', err);
+    res.status(500).json({ error: 'Error interno: ' + err.message });
+  }
 });
 
 router.get('/api/tess/admin/offices', requireTesseractAdmin, (req, res) => {
