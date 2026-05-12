@@ -11,8 +11,8 @@ const PREMIUM_MS = (parseInt(process.env.TESS_PREMIUM_DAYS) || 90) * 86400000;
 
 router.use('/api/tess/admin', validateToken);
 
-// Rutas de oficinas (solo admin maestro)
-router.post('/api/tess/admin/create-office', requireMasterAdmin, (req, res) => {
+// Rutas de oficinas (cualquier admin)
+router.post('/api/tess/admin/create-office', requireTesseractAdmin, (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'Nombre de oficina requerido' });
   const id = createOffice(name, req.user.id);
