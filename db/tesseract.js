@@ -150,7 +150,7 @@ async function initDb() {
 
 // Queries
 function findUserByEmail(email) { return queryOne('SELECT * FROM tess_users WHERE email = ?', [email.toLowerCase()]); }
-function findUserById(id) { return queryOne('SELECT id, email, role, is_admin, is_developer, is_banned, demo_expiry, premium_expiry, login_count, last_login, created_at FROM tess_users WHERE id = ?', [id]); }
+function findUserById(id) { return queryOne('SELECT id, email, role, is_admin, is_developer, is_office_admin, office, is_banned, demo_expiry, premium_expiry, login_count, last_login, created_at FROM tess_users WHERE id = ?', [id]); }
 
 function createUser(email, passwordHash, demoExpiry) {
   const now = Date.now();

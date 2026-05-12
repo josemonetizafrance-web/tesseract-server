@@ -49,30 +49,35 @@ router.post('/api/tess/admin/set-office-admin', requireTesseractAdmin, (req, res
 
 // Crear nuevo usuario
 router.post('/api/tess/admin/create-user', requireTesseractAdmin, (req, res) => {
-  const { email, password, office, userType } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
-  if (!email.endsWith('@tesseract.com')) return res.status(400).json({ error: 'Solo correos @tesseract.com' });
-  if (!password.endsWith('*+')) return res.status(400).json({ error: 'La contraseña debe terminar en *+' });
-  
-  const existing = findUserByEmail(email);
-  if (existing) return res.status(400).json({ error: 'El usuario ya existe' });
-  
-  const hash = bcrypt.hashSync(password, 12);
-  const now = Date.now();
-  const demoExpiry = now + (parseInt(process.env.TESS_DEMO_HOURS) || 24) * 3600000;
-  const userId = createUser(email, hash, demoExpiry);
-  
-  if (office) {
-    updateUserOffice(userId, office);
+  try {
+    const { email, password, office, userType } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
+    if (!email.endsWith('@tesseract.com')) return res.status(400).json({ error: 'Solo correos @tesseract.com' });
+    if (!password.endsWith('*+')) return res.status(400).json({ error: 'La contraseña debe terminar en *+' });
+    
+    const existing = findUserByEmail(email);
+    if (existing) return res.status(400).json({ error: 'El usuario ya existe' });
+    
+    const hash = bcrypt.hashSync(password, 12);
+    const now = Date.now();
+    const demoExpiry = now + (parseInt(process.env.TESS_DEMO_HOURS) || 24) * 3600000;
+    const userId = createUser(email, hash, demoExpiry);
+    
+    if (office) {
+      updateUserOffice(userId, office);
+    }
+    
+    if (userType === 'admin') {
+      setUserOfficeAdmin(userId, true);
+    }
+    
+    const typeLabel = userType === 'admin' ? 'ADMIN DE OFICINA' : 'OPERADOR';
+    logActivity(req.user.id, req.user.email, `Usuario creado: ${email} (${typeLabel})${office ? ' - ' + office : ''}`);
+    res.json({ success: true, userId });
+  } catch (err) {
+    console.error('[CREATE-USER] Error:', err);
+    res.status(500).json({ error: 'Error interno: ' + err.message });
   }
-  
-  if (userType === 'admin') {
-    setUserOfficeAdmin(userId, true);
-  }
-  
-  const typeLabel = userType === 'admin' ? 'ADMIN DE OFICINA' : 'OPERADOR';
-  logActivity(req.user.id, req.user.email, `Usuario creado: ${email} (${typeLabel})${office ? ' - ' + office : ''}`);
-  res.json({ success: true, userId });
 });
 
 // Actualizar oficina de usuario
