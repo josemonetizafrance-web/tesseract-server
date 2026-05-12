@@ -125,34 +125,39 @@ router.get('/api/tess/admin/offices', requireTesseractAdmin, (req, res) => {
 
 // Obtener métricas diarias por oficina (calendario)
 router.get('/api/tess/admin/metrics-daily', requireTesseractAdmin, (req, res) => {
-  const office = req.query.office;
-  const days = parseInt(req.query.days) || 30;
-  
-  let users = [];
-  if (office && office !== 'all') {
-    users = query('SELECT id FROM tess_users WHERE office=?', [office]).map(u => u.id);
-  } else {
-    users = query('SELECT id FROM tess_users').map(u => u.id);
+  try {
+    const office = req.query.office;
+    const days = parseInt(req.query.days) || 30;
+    
+    let users = [];
+    if (office && office !== 'all') {
+      users = query('SELECT id FROM tess_users WHERE office=?', [office]).map(u => u.id);
+    } else {
+      users = query('SELECT id FROM tess_users WHERE office IS NOT NULL AND office != ""').map(u => u.id);
+    }
+    
+    if (users.length === 0) {
+      return res.json({ dailyMetrics: [] });
+    }
+    
+    const userIds = users.join(',');
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const startDateStr = startDate.toISOString().slice(0, 10);
+    
+    const metrics = query(`
+      SELECT date, SUM(icebreakers) as saludos, SUM(likes) as likes, SUM(follows) as follows, SUM(cartas) as cartas
+      FROM tess_metrics_daily 
+      WHERE user_id IN (${userIds}) AND date >= ?
+      GROUP BY date
+      ORDER BY date DESC
+    `, [startDateStr]);
+    
+    res.json({ dailyMetrics: metrics, userCount: users.length, startDate: startDateStr });
+  } catch (err) {
+    console.error('[METRICS-DAILY] Error:', err);
+    res.status(500).json({ error: 'Error: ' + err.message });
   }
-  
-  if (users.length === 0) {
-    return res.json({ dailyMetrics: [] });
-  }
-  
-  const userIds = users.join(',');
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  const startDateStr = startDate.toISOString().slice(0, 10);
-  
-  const metrics = query(`
-    SELECT date, SUM(icebreakers) as saludos, SUM(likes) as likes, SUM(follows) as follows, SUM(cartas) as cartas
-    FROM tess_metrics_daily 
-    WHERE user_id IN (${userIds}) AND date >= ?
-    GROUP BY date
-    ORDER BY date DESC
-  `, [startDateStr]);
-  
-  res.json({ dailyMetrics: metrics });
 });
 
 // Obtener métricas por usuario específico
