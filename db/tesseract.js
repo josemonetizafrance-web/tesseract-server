@@ -364,5 +364,6 @@ module.exports = {
   updateUserOffice, getUsersByOffice, getMetricsByOffice, getActivityByOffice,
   createOffice, getAllOffices, deleteOffice, setUserOfficeAdmin,
   getUserOffice, isUserOfficeAdmin,
-  startSession, endSession, getUserSessions, getTotalTimeByUser
+  startSession, endSession, getUserSessions, getTotalTimeByUser,
+  query
 };
