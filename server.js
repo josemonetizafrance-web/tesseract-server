@@ -60,13 +60,7 @@ app.use(securityHeaders);
 app.use(requestLogger);
 app.use(rateLimitMiddleware);
 
-// --- Rutas ---
-app.use(authRoutes);
-app.use(adminRoutes);
-app.use(metricsRoutes);
-app.use(aiProxyRoutes);
-
-// Health check
+// --- Rutas públicas (sin auth) ---
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', version: '2.0.0', timestamp: Date.now() });
 });
@@ -105,6 +99,12 @@ app.get('/', (req, res) => {
     ]
   });
 });
+
+// --- Rutas con autenticación ---
+app.use(authRoutes);
+app.use(adminRoutes);
+app.use(metricsRoutes);
+app.use(aiProxyRoutes);
 
 // --- Error handler ---
 app.use(globalErrorHandler);
