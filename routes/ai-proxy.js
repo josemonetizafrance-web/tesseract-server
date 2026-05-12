@@ -1,82 +1,81 @@
-/**
- * ROUTES/AI-PROXY - Proxy para ChatGPT, DeepL y traducciones
- */
 const { Router } = require('express');
 const { validateToken } = require('../middleware/auth-tesseract.js');
 
 const router = Router();
 router.use('/api', validateToken);
 
-// POST /api/chatgpt/chat - EATER AI
+const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
+const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
+
+async function callAI(apiUrl, apiKey, model, messages, maxTokens) {
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({ model, messages, max_tokens: maxTokens || 500 })
+  });
+  return response.json();
+}
+
+function tryGroq(messages, model, maxTokens) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return Promise.resolve(null);
+  return callAI(GROQ_API, key, model || 'llama3-70b-8192', messages, maxTokens);
+}
+
+function tryOpenAI(messages, model, maxTokens) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return Promise.resolve(null);
+  return callAI(OPENAI_API, key, model || 'gpt-3.5-turbo', messages, maxTokens);
+}
+
+function extractContent(data) {
+  return data?.choices?.[0]?.message?.content || null;
+}
+
+// POST /api/chatgpt/chat - EATER AI (Groq gratis -> OpenAI fallback)
 router.post('/api/chatgpt/chat', async (req, res) => {
   try {
     const { messages, model, max_tokens } = req.body;
-    const apiKey = process.env.OPENAI_API_KEY;
+    const payload = { messages, model, max_tokens };
 
-    if (!apiKey) {
-      return res.status(503).json({ error: 'OPENAI_API_KEY no configurada en el servidor', fallback: true });
+    let data = await tryGroq(payload.messages, 'llama3-70b-8192', payload.max_tokens);
+    if (data && extractContent(data)) {
+      return res.json(data);
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: model || 'gpt-3.5-turbo',
-        messages: messages || [{ role: 'user', content: 'Hola' }],
-        max_tokens: max_tokens || 500
-      })
-    });
+    data = await tryOpenAI(payload.messages, payload.model || 'gpt-3.5-turbo', payload.max_tokens);
+    if (data && extractContent(data)) {
+      return res.json(data);
+    }
 
-    const data = await response.json();
-    res.json(data);
+    res.status(503).json({ error: 'No hay API key configurada (GROQ_API_KEY u OPENAI_API_KEY)', fallback: true });
   } catch (err) {
-    console.error('[AI-PROXY] chatgpt error:', err.message);
+    console.error('[AI-PROXY] chat error:', err.message);
     res.status(500).json({ error: err.message, fallback: true });
   }
 });
 
-// POST /api/openai/translate - Traducción con DeepSeek/DeepL
+// POST /api/openai/translate - Traducción
 router.post('/api/openai/translate', async (req, res) => {
   try {
-    const { text, translateWith, forceSpanish } = req.body;
+    const { text, forceSpanish } = req.body;
     if (!text) return res.status(400).json({ error: 'Texto requerido' });
 
     const targetLang = forceSpanish ? 'es' : 'en';
-    const apiKey = process.env.OPENAI_API_KEY;
+    const systemMsg = `Traduce el siguiente texto al ${targetLang === 'es' ? 'español' : 'inglés'}. Responde SOLO con la traducción, sin explicaciones.`;
 
-    if (!apiKey) {
-      return res.json({
-        success: false,
-        data: { translations: [{ text: text }] }
-      });
+    let data = await tryGroq([{ role: 'system', content: systemMsg }, { role: 'user', content: text }], 'llama3-70b-8192', 500);
+    let content = extractContent(data);
+    if (content) {
+      return res.json({ success: true, data: { translations: [{ text: content.trim() }] } });
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: `Traduce el siguiente texto al ${targetLang === 'es' ? 'español' : 'inglés'}. Responde SOLO con la traducción, sin explicaciones.` },
-          { role: 'user', content: text }
-        ],
-        max_tokens: 500
-      })
-    });
-
-    const data = await response.json();
-    if (data.choices && data.choices[0]?.message?.content) {
-      return res.json({
-        success: true,
-        data: { translations: [{ text: data.choices[0].message.content.trim() }] }
-      });
+    data = await tryOpenAI([{ role: 'system', content: systemMsg }, { role: 'user', content: text }], 'gpt-3.5-turbo', 500);
+    content = extractContent(data);
+    if (content) {
+      return res.json({ success: true, data: { translations: [{ text: content.trim() }] } });
     }
+
     res.json({ success: false, data: { translations: [{ text }] } });
   } catch (err) {
     res.json({ success: false, data: { translations: [{ text: req.body.text }] } });
@@ -89,31 +88,20 @@ router.post('/api/deepl/translate', async (req, res) => {
     const { text, target } = req.body;
     if (!text) return res.status(400).json({ error: 'Texto requerido' });
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return res.json({ translatedText: text });
+    const systemMsg = `Traduce al ${target || 'español'}. Solo responde con el texto traducido.`;
+
+    let data = await tryGroq([{ role: 'system', content: systemMsg }, { role: 'user', content: text }], 'llama3-70b-8192', 500);
+    let content = extractContent(data);
+    if (content) {
+      return res.json({ translatedText: content.trim() });
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: `Traduce al ${target || 'español'}. Solo responde con el texto traducido.` },
-          { role: 'user', content: text }
-        ],
-        max_tokens: 500
-      })
-    });
-
-    const data = await response.json();
-    if (data.choices && data.choices[0]?.message?.content) {
-      return res.json({ translatedText: data.choices[0].message.content.trim() });
+    data = await tryOpenAI([{ role: 'system', content: systemMsg }, { role: 'user', content: text }], 'gpt-3.5-turbo', 500);
+    content = extractContent(data);
+    if (content) {
+      return res.json({ translatedText: content.trim() });
     }
+
     res.json({ translatedText: text });
   } catch (err) {
     res.json({ translatedText: req.body.text });
