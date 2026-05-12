@@ -1,0 +1,6 @@
+.env
+node_modules/
+tesseract.db
+tesseract.db-wal
+tesseract.db-shm
+*.log
