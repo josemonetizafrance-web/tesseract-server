@@ -1,5 +1,5 @@
 /**
- * ROUTES/AUTH-TESSERACT - Login, verificación y listado de usuarios
+ * ROUTES/AUTH-TESSERACT - Login, verificación y listado de usuarios (MongoDB)
  */
 const { Router } = require('express');
 const bcrypt = require('bcryptjs');
@@ -10,31 +10,31 @@ const router = Router();
 const DEMO_MS = (parseInt(process.env.TESS_DEMO_HOURS) || 24) * 3600000;
 
 // POST /api/tess/auth/login
-router.post('/api/tess/auth/login', (req, res) => {
+router.post('/api/tess/auth/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
   if (!email.endsWith('@tesseract.com')) return res.status(400).json({ error: 'Solo correos @tesseract.com' });
   if (!password.endsWith('*+')) return res.status(400).json({ error: 'La contraseña debe terminar en *+' });
 
   const now = Date.now();
-  let user = findUserByEmail(email);
+  let user = await findUserByEmail(email);
 
   if (user && user.is_banned) return res.status(403).json({ error: 'Usuario baneado' });
 
   if (!user) {
     const hash = bcrypt.hashSync(password, 12);
-    const userId = createUser(email, hash, now + DEMO_MS);
-    const token = generateToken(userId);
-    logActivity(userId, email, 'Primer inicio (demo 24h)');
+    const userId = await createUser(email, hash, now + DEMO_MS);
+    const token = generateToken(userId.toString());
+    await logActivity(userId, email, 'Primer inicio (demo 24h)');
     return res.json({ token, user: { email: email.toLowerCase(), role: 'demo', isAdmin: false, isDeveloper: false, subscription: { status: 'demo', isPremium: false, timeRemaining: DEMO_MS } } });
   }
 
   if (!bcrypt.compareSync(password, user.password_hash)) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
-  updateLoginStats(user.id);
+  await updateLoginStats(user._id);
   const sub = computeSub(user, now);
-  const token = generateToken(user.id);
-  logActivity(user.id, email, 'Inicio de sesión');
+  const token = generateToken(user._id.toString());
+  await logActivity(user._id, email, 'Inicio de sesión');
   res.json({ token, user: { 
     email: user.email, 
     role: sub.status, 
@@ -62,8 +62,9 @@ router.get('/api/tess/auth/verify', validateToken, (req, res) => {
 });
 
 // GET /api/tess/auth/users
-router.get('/api/tess/auth/users', validateToken, requireTesseractAdmin, (req, res) => {
-  res.json({ users: getAllUsers() });
+router.get('/api/tess/auth/users', validateToken, requireTesseractAdmin, async (req, res) => {
+  const users = await getAllUsers();
+  res.json({ users });
 });
 
 function computeSub(user, now) {

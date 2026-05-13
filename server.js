@@ -26,6 +26,9 @@ const { validateToken, requireTesseractAdmin, requireMasterAdmin, checkSubscript
 const authRoutes = require('./routes/auth-tesseract.js');
 const adminRoutes = require('./routes/admin-tesseract.js');
 const metricsRoutes = require('./routes/metrics-tesseract.js');
+const aiProxyRoutes = require('./routes/ai-proxy.js');
+const autoAnswerRoutes = require('./routes/auto-answer-tesseract.js');
+const mailingRoutes = require('./routes/mailing-tesseract.js');
 
 // Inicializar DB
 const { initDb } = require('./db/tesseract.js');
@@ -59,12 +62,7 @@ app.use(securityHeaders);
 app.use(requestLogger);
 app.use(rateLimitMiddleware);
 
-// --- Rutas ---
-app.use(authRoutes);
-app.use(adminRoutes);
-app.use(metricsRoutes);
-
-// Health check
+// --- Rutas públicas (sin auth) ---
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', version: '2.0.0', timestamp: Date.now() });
 });
@@ -77,20 +75,48 @@ app.get('/', (req, res) => {
       'POST /api/tess/auth/login',
       'GET  /api/tess/auth/verify',
       'GET  /api/tess/auth/users',
+      'POST /api/tess/admin/create-office',
+      'GET  /api/tess/admin/offices',
+      'DELETE /api/tess/admin/offices/:name',
+      'POST /api/tess/admin/set-office-admin',
+      'POST /api/tess/admin/create-user',
+      'POST /api/tess/admin/set-office',
+      'GET  /api/tess/admin/users',
+      'GET  /api/tess/admin/metrics',
+      'GET  /api/tess/admin/activity-log',
+      'GET  /api/tess/admin/metrics-daily',
+      'GET  /api/tess/admin/metrics-by-user',
       'POST /api/tess/admin/premium',
       'POST /api/tess/admin/ban',
       'POST /api/tess/admin/unban',
       'POST /api/tess/admin/developer',
       'POST /api/tess/admin/set-password',
       'POST /api/tess/admin/set-plan',
-      'GET  /api/tess/admin/activity-log',
-      'GET  /api/tess/admin/metrics',
       'POST /api/tess/metrics/sync',
       'GET  /api/tess/metrics/my',
+      'POST /api/chatgpt/chat',
+      'POST /api/openai/translate',
+      'POST /api/deepl/translate',
+      'GET  /api/tess/auto-answer/templates',
+      'POST /api/tess/auto-answer/templates',
+      'POST /api/tess/auto-answer/config',
+      'POST /api/tess/auto-answer/increment',
+      'GET  /api/tess/mailing/config',
+      'POST /api/tess/mailing/config',
+      'POST /api/tess/mailing/increment',
+      'GET  /api/tess/mailing/stats',
       'GET  /api/health'
     ]
   });
 });
+
+// --- Rutas con autenticación ---
+app.use(authRoutes);
+app.use(adminRoutes);
+app.use(metricsRoutes);
+app.use(aiProxyRoutes);
+app.use(autoAnswerRoutes);
+app.use(mailingRoutes);
 
 // --- Error handler ---
 app.use(globalErrorHandler);
