@@ -68,7 +68,7 @@ router.get('/api/tess/auth/users', validateToken, requireTesseractAdmin, async (
 });
 
 function computeSub(user, now) {
-  if (user.role === 'developer') return { status: 'developer', isPremium: true, timeRemaining: Infinity };
+  if (user.role === 'developer') return { status: 'developer', isPremium: true, timeRemaining: 999999999999999 };
   if (user.premium_expiry && user.premium_expiry > now) return { status: 'premium', isPremium: true, timeRemaining: user.premium_expiry - now };
   if (user.demo_expiry && user.demo_expiry > now) return { status: 'demo', isPremium: false, timeRemaining: user.demo_expiry - now };
   return { status: 'expired', isPremium: false, timeRemaining: 0 };
