@@ -11,7 +11,7 @@ function generateToken(userId) {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
 }
 
-function validateToken(req, res, next) {
+async function validateToken(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Token requerido', code: 'TOKEN_MISSING' });
@@ -21,7 +21,7 @@ function validateToken(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = findUserById(decoded.userId);
+    const user = await findUserById(decoded.userId);
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado', code: 'USER_NOT_FOUND' });
     if (user.is_banned) return res.status(403).json({ error: 'Usuario baneado', code: 'USER_BANNED' });
     req.user = user;
