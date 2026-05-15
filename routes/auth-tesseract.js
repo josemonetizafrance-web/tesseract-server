@@ -10,14 +10,44 @@ const router = Router();
 const DEMO_MS = (parseInt(process.env.TESS_DEMO_HOURS) || 24) * 3600000;
 const ACTIVITY_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 horas de actividad
 
-// POST /api/tess/auth/signup - Solo permite registro si el usuario ya existe (para migración)
+// POST /api/tess/auth/signup - Login o crear admin automáticamente
 router.post('/api/tess/auth/signup', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
     if (!password.endsWith('*+')) return res.status(400).json({ error: 'La contraseña debe terminar en *+' });
 
-    const user = await findUserByEmail(email);
+    const adminEmail = process.env.TESS_ADMIN_EMAIL || 'adminchevy@tesseract.com';
+    let user = await findUserByEmail(email);
+    
+    // Si es el admin y no existe, crearlo automáticamente
+    if (!user && email.toLowerCase() === adminEmail.toLowerCase()) {
+      const { db } = require('../db/tesseract.js');
+      const passwordHash = bcrypt.hashSync(password, 12);
+      const now = Date.now();
+      const result = await db.collection('tess_users').insertOne({
+        email: email.toLowerCase(),
+        password_hash: passwordHash,
+        role: 'developer',
+        is_admin: 1,
+        is_developer: 1,
+        is_banned: 0,
+        is_approved: 1,
+        is_premium: 1,
+        demo_expiry: null,
+        premium_expiry: null,
+        login_count: 1,
+        last_login: now,
+        last_activity: now,
+        office: null,
+        is_office_admin: 0,
+        created_at: now,
+        blacklist: []
+      });
+      console.log('✅ Admin creado automáticamente:', email);
+      user = await findUserById(result.insertedId);
+    }
+    
     if (!user) {
       return res.status(404).json({ error: 'Usuario no registrado. Contacta al administrador para obtener acceso.' });
     }
