@@ -30,6 +30,7 @@ const aiProxyRoutes = require('./routes/ai-proxy.js');
 const autoAnswerRoutes = require('./routes/auto-answer-tesseract.js');
 const mailingRoutes = require('./routes/mailing-tesseract.js');
 const supportRoutes = require('./routes/support-tesseract.js');
+const blacklistRoutes = require('./routes/blacklist-tesseract.js');
 
 // Inicializar DB
 const { initDb } = require('./db/tesseract.js');
@@ -121,6 +122,7 @@ app.use(aiProxyRoutes);
 app.use(autoAnswerRoutes);
 app.use(mailingRoutes);
 app.use(supportRoutes);
+app.use(blacklistRoutes);
 
 // --- Error handler ---
 app.use(globalErrorHandler);

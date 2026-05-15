@@ -146,6 +146,39 @@ async function createUserPending(email, passwordHash, demoExpiry) {
   return result.insertedId;
 }
 
+// Blacklist functions
+async function getBlacklist(userId) {
+  const objId = toObjectId(userId);
+  if (!objId) return [];
+  const user = await db.collection('tess_users').findOne({ _id: objId }, { projection: { blacklist: 1 } });
+  return user?.blacklist || [];
+}
+
+async function addToBlacklist(userId, contactId) {
+  const objId = toObjectId(userId);
+  if (!objId) return false;
+  await db.collection('tess_users').updateOne(
+    { _id: objId },
+    { $addToSet: { blacklist: contactId } }
+  );
+  return true;
+}
+
+async function removeFromBlacklist(userId, contactId) {
+  const objId = toObjectId(userId);
+  if (!objId) return false;
+  await db.collection('tess_users').updateOne(
+    { _id: objId },
+    { $pull: { blacklist: contactId } }
+  );
+  return true;
+}
+
+async function isInBlacklist(userId, contactId) {
+  const list = await getBlacklist(userId);
+  return list.includes(contactId);
+}
+
 async function updateLoginStats(userId) {
   const objId = toObjectId(userId);
   if (!objId) return;
@@ -642,5 +675,6 @@ module.exports = {
   getUserOffice, isUserOfficeAdmin,
   startSession, endSession, getUserSessions, getTotalTimeByUser,
   getTotalTimeByOffice,
+  getBlacklist, addToBlacklist, removeFromBlacklist, isInBlacklist,
   query, save
 };
