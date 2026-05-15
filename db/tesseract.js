@@ -8,7 +8,13 @@ const bcrypt = require('bcryptjs');
 let db = null;
 let client = null;
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://TESSERACTDB2026:AdminSegura2026*+@tesseractdb.kpaebpa.mongodb.net/?retryWrites=true&w=majority';
+// NOTE: MONGODB_URI debe estar en .env - NO hardcodear credenciales aquí
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error('❌ Error: Define MONGODB_URI en el archivo .env');
+  console.error('   Ejemplo: mongodb+srv://usuario:password@cluster.mongodb.net/tesseract');
+  process.exit(1);
+}
 
 async function connectMongo() {
   try {
@@ -37,9 +43,13 @@ async function initDb() {
   await db.collection('tess_auto_answer_daily').createIndex({ user_id: 1, date: 1 });
   await db.collection('tess_mailing_daily').createIndex({ user_id: 1, date: 1 });
 
-  // Crear usuario admin si no existe
-  const adminEmail = process.env.TESS_ADMIN_EMAIL || 'adminchevy@tesseract.com';
-  const adminPass = process.env.TESS_ADMIN_PASSWORD || 'AdminSegura2026*+';
+  // Crear usuario admin si no existe (solo si están definidos en .env)
+  const adminEmail = process.env.TESS_ADMIN_EMAIL;
+  const adminPass = process.env.TESS_ADMIN_PASSWORD;
+  
+  if (!adminEmail || !adminPass) {
+    console.log('⚠️  Admin no creado: define TESS_ADMIN_EMAIL y TESS_ADMIN_PASSWORD en .env');
+  } else {
   
   const existingAdmin = await db.collection('tess_users').findOne({ email: adminEmail });
   if (!existingAdmin) {
@@ -59,9 +69,10 @@ async function initDb() {
       is_office_admin: 0,
       created_at: Date.now()
     });
-    console.log('✅ Admin creado:', adminEmail);
+console.log('✅ Admin creado:', adminEmail);
+    }
   }
-  
+   
   console.log('✅ Base de datos MongoDB inicializada');
   return db;
 }
@@ -90,6 +101,7 @@ async function findUserById(id) {
 }
 
 async function createUser(email, passwordHash, demoExpiry) {
+  const now = Date.now();
   const result = await db.collection('tess_users').insertOne({
     email: email.toLowerCase(),
     password_hash: passwordHash,
@@ -97,13 +109,39 @@ async function createUser(email, passwordHash, demoExpiry) {
     is_admin: 0,
     is_developer: 0,
     is_banned: 0,
+    is_approved: 1, // Por defecto aprobado para usuarios existentes
+    is_premium: 0,
     demo_expiry: demoExpiry,
     premium_expiry: null,
     login_count: 1,
-    last_login: Date.now(),
+    last_login: now,
+    last_activity: now,
     office: null,
     is_office_admin: 0,
-    created_at: Date.now()
+    created_at: now
+  });
+  return result.insertedId;
+}
+
+async function createUserPending(email, passwordHash, demoExpiry) {
+  const now = Date.now();
+  const result = await db.collection('tess_users').insertOne({
+    email: email.toLowerCase(),
+    password_hash: passwordHash,
+    role: 'demo',
+    is_admin: 0,
+    is_developer: 0,
+    is_banned: 0,
+    is_approved: 0, // Pendiente de aprobación
+    is_premium: 0,
+    demo_expiry: demoExpiry,
+    premium_expiry: null,
+    login_count: 0,
+    last_login: null,
+    last_activity: now,
+    office: null,
+    is_office_admin: 0,
+    created_at: now
   });
   return result.insertedId;
 }
@@ -114,6 +152,15 @@ async function updateLoginStats(userId) {
   await db.collection('tess_users').updateOne(
     { _id: objId },
     { $inc: { login_count: 1 }, $set: { last_login: Date.now() } }
+  );
+}
+
+async function updateLastActivity(userId, timestamp) {
+  const objId = toObjectId(userId);
+  if (!objId) return;
+  await db.collection('tess_users').updateOne(
+    { _id: objId },
+    { $set: { last_activity: timestamp } }
   );
 }
 
@@ -150,6 +197,13 @@ async function updateUserPassword(userId, passwordHash) {
   await db.collection('tess_users').updateOne(
     { _id: objId },
     { $set: { password_hash: passwordHash } }
+  );
+}
+
+async function updateUserApproved(email, approved) {
+  await db.collection('tess_users').updateOne(
+    { email: email.toLowerCase() },
+    { $set: { is_approved: approved ? 1 : 0 } }
   );
 }
 
@@ -204,7 +258,7 @@ async function getRecentActivity(limit = 100) {
   return await db.collection('tess_activity_log').aggregate(pipeline).toArray();
 }
 
-async function upsertDailyMetric(userId, date, stats, now) {
+async function upsertDailyMetric(userId, date, stats, now, office = null) {
   const objId = toObjectId(userId);
   if (!objId) return;
   await db.collection('tess_metrics_daily').updateOne(
@@ -219,6 +273,7 @@ async function upsertDailyMetric(userId, date, stats, now) {
         auto_response: stats?.autoResponse || 0,
         mailing: stats?.mailingSent || 0,
         ids_captured: 0,
+        office: office || null,
         updated_at: now
       }
     },
@@ -577,8 +632,8 @@ async function save() {
 }
 
 module.exports = {
-  initDb, findUserByEmail, findUserById, createUser, updateLoginStats,
-  updateUserPremium, setUserBan, setUserDeveloper, updateUserPassword, setUserCustomPlan, deleteUser,
+  initDb, findUserByEmail, findUserById, createUser, createUserPending, updateLoginStats, updateLastActivity,
+  updateUserPremium, setUserBan, setUserDeveloper, updateUserPassword, updateUserApproved, setUserCustomPlan, deleteUser,
   getAllUsers, logActivity, getRecentActivity,
   upsertDailyMetric, upsertMonthlyMetric, insertCollectedId,
   getMetricsOverview, getMyMetrics,

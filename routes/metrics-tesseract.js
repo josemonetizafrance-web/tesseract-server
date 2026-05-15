@@ -9,12 +9,16 @@ const router = Router();
 router.use('/api/tess/metrics', validateToken);
 
 router.post('/api/tess/metrics/sync', async (req, res) => {
-  const { stats, collectedIds, action, count } = req.body;
+  const { stats, collectedIds, action, count, office } = req.body;
   const now = Date.now();
   const date = new Date().toISOString().slice(0, 10);
   const month = new Date().toISOString().slice(0, 7);
+  
+  // Usar oficina del body o del usuario
+  const userOffice = office || req.user.office || null;
 
-  await upsertDailyMetric(req.user.id, date, stats || {}, now);
+  // Guardar métricas diarias incluyendo oficina
+  await upsertDailyMetric(req.user.id, date, stats || {}, now, userOffice);
   await upsertMonthlyMetric(req.user.id, month, stats || {}, now);
 
   if (collectedIds) {

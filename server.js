@@ -111,7 +111,9 @@ app.get('/', (req, res) => {
 });
 
 // --- Rutas con autenticación ---
+console.log('[SERVER] Cargando authRoutes...');
 app.use(authRoutes);
+console.log('[SERVER] Rutas auth cargadas OK');
 app.use(adminRoutes);
 app.use(metricsRoutes);
 app.use(aiProxyRoutes);
@@ -123,9 +125,15 @@ app.use(globalErrorHandler);
 
 // --- Iniciar ---
 (async () => {
-  await initDb();
-  app.listen(PORT, () => {
-    console.log(`🚀 TESSERACT Server corriendo en http://localhost:${PORT}`);
-    console.log(`🔐 Admin: ${process.env.TESS_ADMIN_EMAIL || 'adminchevy@tesseract.com'}`);
-  });
+  try {
+    const db = await initDb();
+    app.locals.db = db; // Disponibilizar db en todas las rutas
+    app.listen(PORT, () => {
+      console.log(`🚀 TESSERACT Server corriendo en http://localhost:${PORT}`);
+      console.log(`🔐 Admin: ${process.env.TESS_ADMIN_EMAIL || 'adminchevy@tesseract.com'}`);
+    });
+  } catch (err) {
+    console.error('❌ Error al iniciar servidor:', err);
+    process.exit(1);
+  }
 })();

@@ -53,7 +53,8 @@ router.post('/api/tess/admin/create-user', requireTesseractAdmin, async (req, re
   try {
     const { email, password, office, userType } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
-    if (!email.endsWith('@tesseract.com')) return res.status(400).json({ error: 'Solo correos @tesseract.com' });
+    // Dominio libre - cualquier email permitido
+    // if (!email.endsWith('@tesseract.com')) return res.status(400).json({ error: 'Solo correos @tesseract.com' });
     if (!password.endsWith('*+')) return res.status(400).json({ error: 'La contraseña debe terminar en *+' });
     
     const existing = await findUserByEmail(email);
@@ -122,7 +123,7 @@ router.get('/api/tess/admin/activity-log', requireTesseractAdmin, async (req, re
   res.json({ logs });
 });
 
-// Obtener métricas diarias por oficina (calendario) - simplificado para MongoDB
+// Obtener métricas diarias por oficina (calendario)
 router.get('/api/tess/admin/metrics-daily', requireTesseractAdmin, async (req, res) => {
   try {
     const office = req.query.office;
@@ -144,8 +145,39 @@ router.get('/api/tess/admin/metrics-daily', requireTesseractAdmin, async (req, r
     startDate.setDate(startDate.getDate() - days);
     const startDateStr = startDate.toISOString().slice(0, 10);
     
-    // Aggregation simplified
-    const dailyMetrics = []; // MongoDB aggregation would go here
+    // Agregar pipeline para obtener métricas diarias por fecha
+    const db = req.app.locals.db;
+    const metricsCollection = db.collection('tess_metrics_daily');
+    
+    const pipeline = [
+      {
+        $match: {
+          user_id: { $in: userIds },
+          date: { $gte: startDateStr }
+        }
+      },
+      {
+        $group: {
+          _id: '$date',
+          likes: { $sum: '$likes' },
+          follows: { $sum: '$follows' },
+          auto_response: { $sum: '$auto_response' },
+          mailing: { $sum: '$mailing' }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ];
+    
+    const results = await metricsCollection.aggregate(pipeline).toArray();
+    
+    // Formatear resultado
+    const dailyMetrics = results.map(r => ({
+      date: r._id,
+      likes: r.likes || 0,
+      follows: r.follows || 0,
+      auto_response: r.auto_response || 0,
+      mailing: r.mailing || 0
+    }));
     
     res.json({ dailyMetrics, userCount: users.length, startDate: startDateStr });
   } catch (err) {
