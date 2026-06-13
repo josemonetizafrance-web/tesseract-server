@@ -60,8 +60,12 @@ async function spTranslate(text) {
       body: JSON.stringify({ text: text, targetLang: 'en', targetName: 'English' })
     });
     var data = await resp.json();
-    if (data.success && data.data?.translations?.[0]?.text) return data.data.translations[0].text;
-    if (data.translatedText) return data.translatedText;
+    var translatedText = data?.data?.translations?.[0]?.text || data?.translatedText;
+    if (translatedText && translatedText !== text) {
+      console.log('[SP] Translated:', text.substring(0, 40), '→', translatedText.substring(0, 40));
+      return translatedText;
+    }
+    console.log('[SP] Translate returned same or no translation:', JSON.stringify(data).substring(0, 200));
   } catch (e) { console.warn('[SP] Translation error:', e.message); }
   return text;
 }
