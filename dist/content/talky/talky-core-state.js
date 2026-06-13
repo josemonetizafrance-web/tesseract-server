@@ -197,7 +197,7 @@ async function generateIcebreakersFromAI() {
     var res = await fetch(Tesseract.API + '/api/chatgpt/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: 'Genera 5 mensajes en formato JSON: 1 friendship, 1 real_love, 1 hot_talks, 2 mail.' }], max_tokens: 4000, temperature: 0.8 })
+      body: JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: 'Genera 5 mensajes en formato JSON: 1 friendship, 1 real_love, 1 hot_talks, 2 mail.' }], max_tokens: 1500, temperature: 0.8 })
     });
     var data = await res.json();
     var content = data.choices?.[0]?.message?.content || '';

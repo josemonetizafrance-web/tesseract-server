@@ -19,7 +19,7 @@ async function callAI(apiUrl, apiKey, model, messages, maxTokens) {
 function tryGroq(messages, model, maxTokens) {
   const key = process.env.GROQ_API_KEY;
   if (!key) return Promise.resolve({ ok: false, status: 0, data: { error: 'GROQ_API_KEY no configurada' } });
-  return callAI(GROQ_API, key, model || 'llama-3.3-70b-versatile', messages, maxTokens);
+  return callAI(GROQ_API, key, model || 'llama-3.1-8b-instant', messages, maxTokens);
 }
 
 function tryOpenAI(messages, model, maxTokens) {
@@ -38,7 +38,7 @@ router.post('/api/chatgpt/chat', validateToken, async (req, res) => {
     const { messages, model, max_tokens } = req.body;
     const payload = { messages, model, max_tokens };
 
-    const groqResult = await tryGroq(payload.messages, 'llama-3.3-70b-versatile', payload.max_tokens);
+    const groqResult = await tryGroq(payload.messages, 'llama-3.1-8b-instant', payload.max_tokens);
     if (groqResult.ok && extractContent(groqResult.data)) {
       return res.json(groqResult.data);
     }
@@ -85,7 +85,7 @@ router.post('/api/openai/translate', validateToken, async (req, res) => {
 
     const systemMsg = `Traduce el siguiente texto del español al ${langName} (${langCode}). Responde SOLO con la traducción, sin explicaciones ni notas.`;
 
-    var groqResult2 = await tryGroq([{ role: 'system', content: systemMsg }, { role: 'user', content: text }], 'llama-3.3-70b-versatile', 500);
+    var groqResult2 = await tryGroq([{ role: 'system', content: systemMsg }, { role: 'user', content: text }], 'llama-3.1-8b-instant', 500);
     var content2 = groqResult2.ok ? extractContent(groqResult2.data) : null;
     if (content2) {
       return res.json({ success: true, data: { translations: [{ text: content2.trim() }] } });
@@ -111,7 +111,7 @@ router.post('/api/deepl/translate', validateToken, async (req, res) => {
 
     const systemMsg = `Traduce al ${target || 'español'}. Solo responde con el texto traducido.`;
 
-    var groqResult3 = await tryGroq([{ role: 'system', content: systemMsg }, { role: 'user', content: text }], 'llama-3.3-70b-versatile', 500);
+    var groqResult3 = await tryGroq([{ role: 'system', content: systemMsg }, { role: 'user', content: text }], 'llama-3.1-8b-instant', 500);
     var content4 = groqResult3.ok ? extractContent(groqResult3.data) : null;
     if (content4) {
       return res.json({ translatedText: content4.trim() });
