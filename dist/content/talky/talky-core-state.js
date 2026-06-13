@@ -261,6 +261,8 @@ async function executeIcebreakerSweep() {
     showTessToast('Selecciona al menos un Icebreaker para enviar', 'warning');
     window._ibMode = 'idle'; updateIBUI(); return;
   }
+  var catOrder = { friendship: 1, real_love: 2, hot_talks: 3, mail: 4 };
+  toSend.sort(function(a, b) { return (catOrder[a.category] || 99) - (catOrder[b.category] || 99); });
   document.getElementById('ibStatus').textContent = 'Traduciendo al ingl\u00e9s\u2026';
   var translated = [];
   for (var ti = 0; ti < toSend.length; ti++) {
@@ -268,6 +270,7 @@ async function executeIcebreakerSweep() {
     translated.push({ category: toSend[ti].category, text: tResult || toSend[ti].text, selected: toSend[ti].selected });
   }
   window._ibMessages = toSend = translated;
+  toSend.sort(function(a, b) { return (catOrder[a.category] || 99) - (catOrder[b.category] || 99); });
   renderIBPreview();
   var total = toSend.length;
   document.getElementById('ibStatus').textContent = 'Enviando 1/' + total + '\u2026';
