@@ -54,7 +54,7 @@ async function spTranslate(text) {
   try {
     var token = await new Promise(function (r) { chrome.storage.local.get('tess_jwt', function (d) { r(d.tess_jwt); }); });
     if (!token) return text;
-    var resp = await fetch((window.TESSERACT_API || 'https://tesseract-jblo.onrender.com') + '/api/openai/translate', {
+    var resp = await fetch(Tesseract.API + '/api/openai/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ text: text, targetLang: 'en', targetName: 'English' })

@@ -272,7 +272,6 @@ async function saveAAPanelConfig() {
   await window._setAAState(enabled);
   if (enabled) await window._updateAAWeBelieve({ enabled: weBelieveEnabled });
 
-  if (typeof window._tessServerSync !== 'undefined') window._tessServerSync.config('tess_auto_answer_config', { enabled, useAI, maxDaily, delay: { min: delayMin, max: delayMax }, scanSources, events, weBelieve: { enabled: weBelieveEnabled, response: weBelieveResponse } });
   console.log('[AA-PANEL] Config saved');
 }
 

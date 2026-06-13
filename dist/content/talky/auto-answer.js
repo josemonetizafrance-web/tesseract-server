@@ -6,7 +6,7 @@
 
 const AUTO_ANSWER_STORAGE_KEY = 'tess_auto_answer_config';
 const AA_CONTACTED_HISTORY_KEY = 'tess_aa_contacted_history';
-var TESSERACT_API = window.TESSERACT_API || 'https://tesseract-jblo.onrender.com';
+var TESSERACT_API = 'https://tesseract-jblo.onrender.com';
 
 // Variables blacklist
 let aaBlacklist = [];
@@ -51,13 +51,10 @@ async function isContactAlreadyContacted(profileId) {
 
 async function markContactAsContacted(profileId) {
   try {
-    const data = await chrome.storage.local.get([AA_CONTACTED_HISTORY_KEY, 'tess_ml_contacted_history']);
-    const aaHistory = data[AA_CONTACTED_HISTORY_KEY] || {};
-    const mlHistory = data['tess_ml_contacted_history'] || {};
-    aaHistory[profileId] = true;
-    mlHistory[profileId] = true;
-    await chrome.storage.local.set({ [AA_CONTACTED_HISTORY_KEY]: aaHistory, 'tess_ml_contacted_history': mlHistory });
-    if (typeof window._tessServerSync !== 'undefined') window._tessServerSync.history(profileId);
+    const data = await chrome.storage.local.get([AA_CONTACTED_HISTORY_KEY]);
+    const history = data[AA_CONTACTED_HISTORY_KEY] || {};
+    history[profileId] = true;
+    await chrome.storage.local.set({ [AA_CONTACTED_HISTORY_KEY]: history });
   } catch (e) { console.error('[AA] Error guardando historial:', e); }
 }
 
@@ -320,10 +317,6 @@ async function executeGreetingSweep() {
     
     if (await isContactAlreadyContacted(profileId)) {
       console.log('[AA] Saltando ID ya contactado:', profileId);
-      continue;
-    }
-    if (isInAABlacklist(profileId)) {
-      console.log('[AA] ⛔ Salto (blacklist):', profileId);
       continue;
     }
     processedIds.add(profileId);
@@ -754,7 +747,7 @@ function startWeBelieveObserver() {
   const chatArea = document.querySelector(TALK_Y.PAGE_CHAT_BODY);
   if (!chatArea) return;
   weBelieveObserver = new MutationObserver((mutations) => {
-    if (!aaConfig || !aaConfig.enabled || !aaConfig.weBelieve?.enabled) return;
+    if (!aaConfig || !aaConfig.weBelieve?.enabled) return;
     for (const mutation of mutations) {
       if (mutation.type !== 'childList') continue;
       for (const node of mutation.addedNodes) {
@@ -783,15 +776,6 @@ function stopWeBelieveObserver() {
 }
 
 async function sendWeBelieveResponse() {
-  if (!aaConfig || !aaConfig.enabled) return;
-  const today = new Date().toISOString().slice(0, 10);
-  if (aaActiveDate !== today) resetDailyCounter();
-  if (aaConfig.maxDaily > 0 && aaDailyCount >= aaConfig.maxDaily) return;
-  const profileId = getCurrentChatProfileId();
-  if (profileId && isInAABlacklist(profileId)) {
-    console.log('[AA] ⛔ We Believe skip (blacklist):', profileId);
-    return;
-  }
   const input = document.querySelector(TALK_Y.CHAT_TEXTAREA) || document.querySelector(TALK_Y.CHAT_INPUT_ID) || document.querySelector(TALK_Y.ANY_TEXTAREA);
   const sendBtn = document.querySelector(TALK_Y.SEND_BTN_CLASS) || document.querySelector(TALK_Y.SEND_BTN_ID) || document.querySelector(TALK_Y.SEND_BTN_ARIA);
   if (!input || !sendBtn) return;
@@ -805,20 +789,6 @@ async function sendWeBelieveResponse() {
   input.dispatchEvent(new Event('change', { bubbles: true }));
   await sleep(1500 + getRandomDelay(aaConfig.delay.min, aaConfig.delay.max));
   sendBtn.click();
-  aaDailyCount++;
-  if (typeof botStats !== 'undefined') { botStats.autoResponse = (botStats.autoResponse || 0) + 1; botStats.repliesResponded = (botStats.repliesResponded || 0) + 1; }
-  if (aaConfig) {
-    aaConfig.respondedToday = aaDailyCount;
-    if (!aaPendingSave) {
-      aaPendingSave = true;
-      clearTimeout(aaSaveTimer);
-      aaSaveTimer = setTimeout(async () => {
-        aaPendingSave = false;
-        await saveAAConfig();
-      }, 5000);
-    }
-  }
-  if (profileId) await markContactAsContacted(profileId);
   console.log('[AA] We Believe response sent');
 }
 
@@ -936,4 +906,3 @@ window._setAAState = setAAState;
 window._updateAAWeBelieve = updateAAWeBelieve;
 window._startWeBelieveObserver = startWeBelieveObserver;
 window._stopWeBelieveObserver = stopWeBelieveObserver;
-window._executeGreetingSweep = executeGreetingSweep;
