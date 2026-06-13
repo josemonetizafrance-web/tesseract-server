@@ -1,18 +1,7 @@
-# Environment variables (contain real credentials)
 .env
-server/.env
-server/.env.test
+.env.local
+.env.production
+.env.test
+node_modules/
+*.log
 
-# Node modules
-node_modules
-server/node_modules
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
