@@ -1,0 +1,168 @@
+/* login.css - TESSERACT Light Theme */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #f4f4f8;
+    color: #1a1a2e;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#bouncing-logo, .bouncing-logo-instance {
+    position: fixed;
+    z-index: 0;
+    pointer-events: none;
+    width: 120px;
+    height: auto;
+    opacity: 0.06;
+    will-change: left, top;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 40px 36px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.04);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.logo {
+    width: 280px;
+    height: auto;
+    margin: 0 auto 16px;
+    display: block;
+}
+.logo svg { width: 100%; height: 100%; }
+
+.login-header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    color: #7c3aed;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 1.5px;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+/* Messages */
+.message {
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    border-left: 3px solid;
+}
+.message.error {
+    background: #fef2f2;
+    border-color: #ef4444;
+    color: #991b1b;
+}
+.message.success {
+    background: #f0fdf4;
+    border-color: #22c55e;
+    color: #166534;
+}
+
+/* Form */
+.input-group {
+    margin-bottom: 20px;
+}
+.input-group label {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+.input-group input {
+    width: 100%;
+    padding: 12px 16px;
+    background: #f8f8fc;
+    border: 1px solid #e0e0e8;
+    border-radius: 8px;
+    color: #1a1a2e;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+.input-group input:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+    background: #fff;
+}
+.input-group input::placeholder { color: #aaa; }
+
+.hint {
+    display: block;
+    font-size: 10px;
+    color: #7c3aed;
+    margin-top: 6px;
+    opacity: 0.7;
+}
+
+/* Button */
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: #7c3aed;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+.btn-primary:hover:not(:disabled) { background: #6d28d9; }
+.btn-primary:active:not(:disabled) { transform: scale(0.98); }
+.btn-primary:disabled {
+    background: #d0d0d8;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* Footer */
+.login-footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid #f0f0f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 10px;
+    color: #aaa;
+    letter-spacing: 0.5px;
+}
+.version { color: #7c3aed; font-weight: 600; }
+.separator { color: #ddd; }
+
+/* Responsive */
+@media (max-width: 480px) {
+    .login-container { margin: 16px; padding: 28px 24px; }
+    .login-header h1 { font-size: 22px; }
+}

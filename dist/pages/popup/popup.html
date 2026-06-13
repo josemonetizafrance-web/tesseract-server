@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>TESSERACT</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 300px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+        }
+        .popup-container { padding: 12px; }
+        .header {
+            text-align: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333350;
+        }
+        .header h1 {
+            font-size: 14px;
+            color: #8b5cf6;
+            letter-spacing: 2px;
+        }
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 6px;
+            transition: background 0.2s;
+        }
+        .btn-primary { background: #8b5cf6; color: #fff; }
+        .btn-primary:hover { background: #7c3aed; }
+        .btn-secondary { background: #333350; color: #e0e0e0; }
+        .btn-secondary:hover { background: #444460; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #8888a0;
+            margin-bottom: 10px;
+            padding: 6px 8px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+        }
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+        .status-demo { background: rgba(234,179,8,0.2); color: #fde047; }
+        .status-premium { background: rgba(139,92,246,0.2); color: #c4b5fd; }
+        .status-expired { background: rgba(239,68,68,0.2); color: #fca5a5; }
+        .email-display { font-size: 10px; color: #8888a0; margin-bottom: 8px; word-break: break-all; }
+        .time-remaining { font-size: 10px; color: #8b5cf6; margin-bottom: 10px; }
+        .footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid #333350; text-align: center; font-size: 9px; color: #555570; }
+    </style>
+</head>
+<body>
+    <div class="popup-container">
+        <div class="header">
+
+        </div>
+        <div id="auth-section">Cargando...</div>
+    </div>
+    <script src="/dist/modules/error-handler.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

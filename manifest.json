@@ -1,0 +1,82 @@
+{
+    "manifest_version": 3,
+    "name": "TESSERACT",
+    "version": "24.0",
+    "description": "TESSERACT - Sistema Operativo IA",
+    "permissions": ["storage", "tabs", "alarms", "webNavigation", "scripting", "webRequest"],
+    "host_permissions": [
+        "https://tesseract-jblo.onrender.com/*",
+        "https://talkytimes.com/*",
+        "https://www.talkytimes.com/*",
+        "https://amolatina.com/*",
+        "https://www.amolatina.com/*",
+        "https://dating.com/*",
+        "https://www.dating.com/*",
+        "https://yourtravelmates.com/*",
+        "https://www.yourtravelmates.com/*",
+        "https://arabiandate.com/*",
+        "https://www.arabiandate.com/*",
+        "https://luxee.io/*",
+        "https://www.luxee.io/*"
+    ],
+    "icons": {
+        "16": "dist/assets/images/icon16.png",
+        "48": "dist/assets/images/icon48.png",
+        "128": "dist/assets/images/icon128.png"
+    },
+    "action": {
+        "default_title": "TESSERACT",
+        "default_icon": {
+            "16": "dist/assets/images/icon16.png",
+            "48": "dist/assets/images/icon48.png",
+            "128": "dist/assets/images/icon128.png"
+        },
+        "default_popup": "dist/pages/popup/popup.html"
+    },
+    "background": {
+        "service_worker": "dist/background/background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://talkytimes.com/*", "https://www.talkytimes.com/*"],
+            "js": [
+                "dist/modules/state-manager.js",
+                "dist/modules/error-handler.js",
+                "dist/content/talky/dom-selectors.js",
+                "dist/content/talky/dom-contact-finder.js",
+                "dist/content/talky/auto-answer.js",
+                "dist/content/talky/auto-answer-panel.js",
+                "dist/content/talky/smart-mailing.js",
+                "dist/content/talky/smart-mailing-panel.js",
+                "dist/content/talky/like-follow-photos.js",
+                "dist/content/talky/talky-utils.js",
+                "dist/content/talky/talky-core-state.js",
+                "dist/content/talky/talky-eater.js",
+                "dist/content/talky/talky-sweep.js",
+                "dist/content/talky/talky-saludo-push.js",
+                "dist/content/talky/talky-cribs.js",
+                "dist/content/talky/talky-mail-cribs.js",
+                "dist/content/talky/talky-panel.js",
+                "dist/content/talky/talky-bot-panel.js"
+            ],
+            "run_at": "document_end"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "dist/pages/login/*",
+                "dist/pages/dashboard/*",
+                "dist/pages/admin/*",
+                "dist/pages/popup/*",
+                "dist/modules/*",
+                "dist/content/talky/*",
+                "dist/assets/*"
+            ],
+            "matches": [
+                "https://talkytimes.com/*",
+                "https://www.talkytimes.com/*"
+            ]
+        }
+    ]
+}

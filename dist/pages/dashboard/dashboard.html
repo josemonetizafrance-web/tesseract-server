@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>TESSERACT - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f4f4f8;
+            color: #1a1a2e;
+            min-height: 100vh;
+        }
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8ef;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .top-bar-left { display: flex; gap: 10px; }
+        .top-bar-right { display: flex; align-items: center; }
+        .layout {
+            display: flex;
+            min-height: calc(100vh - 53px);
+        }
+        .sidebar {
+            width: 200px;
+            background: #fff;
+            border-right: 1px solid #e8e8ef;
+            padding: 16px 0;
+            flex-shrink: 0;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            color: #888;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { color: #7c3aed; background: rgba(124,58,237,0.04); }
+        .nav-item.active { color: #7c3aed; border-left-color: #7c3aed; background: rgba(124,58,237,0.06); font-weight: 700; }
+        .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .main-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+        .view { display: none; width: 100%; max-width: 650px; }
+        .view.active { display: block; }
+
+        .dash-container {
+            width: 100%;
+            padding: 40px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.04);
+            text-align: center;
+        }
+        .dash-container .logo { width: 340px; height: auto; margin: 0 auto 20px; }
+        .dash-container .logo svg { width: 100%; height: auto; display: block; }
+        .dash-container .logo.spin { animation: dashSpin 12s linear infinite; transform-style: preserve-3d; }
+        @keyframes dashSpin { 0% { transform: perspective(800px) rotateY(0deg); } 100% { transform: perspective(800px) rotateY(360deg); } }
+        .dash-container h1 { font-size: 28px; color: #7c3aed; letter-spacing: 2px; font-weight: 800; margin-bottom: 8px; }
+        .dash-container .subtitle { font-size: 11px; color: #888; letter-spacing: 1.5px; margin-bottom: 30px; font-weight: 500; }
+        .dash-container .info { font-size: 12px; color: #888; margin-bottom: 20px; }
+        .status-badge {
+            display: inline-block; padding: 4px 12px;
+            border-radius: 6px; font-size: 11px; font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .status-demo { background: #fef9c3; color: #854d0e; }
+        .status-premium { background: #f3e8ff; color: #6b21a8; }
+        .status-expired { background: #fee2e2; color: #991b1b; }
+        .status-developer { background: #dcfce7; color: #166534; }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 8px;
+            font-family: 'Inter', sans-serif; font-size: 11px;
+            font-weight: 600; letter-spacing: 0.5px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #7c3aed; color: #fff; box-shadow: 0 2px 8px rgba(124,58,237,0.2); }
+        .btn-primary:hover { background: #6d28d9; transform: translateY(-1px); }
+        .btn-secondary { background: #e8e8ef; color: #444; }
+        .btn-secondary:hover { background: #dddde6; }
+        .btn-danger { background: transparent; color: #ef4444; border: 1px solid #ef4444; }
+        .btn-danger:hover { background: #ef4444; color: #fff; }
+        .time-remaining { font-size: 14px; color: #7c3aed; font-weight: 700; margin-bottom: 20px; }
+        .footer { margin-top: 30px; font-size: 9px; color: #aaa; }
+
+        /* Notes view */
+        .notes-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .notes-header h2 { color: #7c3aed; font-size: 18px; letter-spacing: 1px; font-weight: 800; }
+        .notes-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid #f0f0f5; }
+        .notes-tab { padding: 8px 20px; background: transparent; border: none; color: #888; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: 0.5px; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+        .notes-tab:hover { color: #7c3aed; }
+        .notes-tab.active { color: #7c3aed; border-bottom-color: #7c3aed; }
+        .notes-tab-content { display: none; }
+        .notes-tab-content.active { display: block; }
+        .note-form { background: #fafafc; border: 1px solid #eeeef4; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+        .note-form input, .note-form textarea { width: 100%; padding: 10px; margin-bottom: 8px; background: #f8f8fc; border: 1px solid #e0e0e8; border-radius: 6px; color: #1a1a2e; font-family: 'Inter', sans-serif; font-size: 12px; outline: none; transition: border-color 0.2s; }
+        .note-form input:focus, .note-form textarea:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+        .note-form textarea { min-height: 80px; resize: vertical; }
+        .note-form .form-row { display: flex; gap: 8px; }
+        .note-form .form-row input { flex: 1; }
+        .btn-notes { padding: 8px 20px; background: #7c3aed; color: #fff; border: none; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: 0.5px; transition: all 0.2s; }
+        .btn-notes:hover { background: #6d28d9; }
+        .btn-notes-sm { padding: 6px 14px; font-size: 10px; border-radius: 6px; }
+        .btn-notes-outline { background: transparent; border: 1px solid #d0d0d8; color: #666; }
+        .btn-notes-outline:hover { background: #f4f4f8; border-color: #7c3aed; color: #7c3aed; }
+        .btn-notes-danger { background: transparent; border: 1px solid #fecaca; color: #ef4444; }
+        .btn-notes-danger:hover { background: #fef2f2; }
+        .btn-notes-success { background: transparent; border: 1px solid #bbf7d0; color: #16a34a; }
+        .btn-notes-success:hover { background: #f0fdf4; }
+        .note-card { background: #fff; border: 1px solid #eeeef4; border-radius: 10px; padding: 14px; margin-bottom: 10px; transition: box-shadow 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .note-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .note-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .note-card-title { font-size: 12px; color: #7c3aed; font-weight: 700; }
+        .note-card-sub { font-size: 10px; color: #888; }
+        .note-card-text { font-size: 11px; color: #444; line-height: 1.5; margin-top: 6px; padding: 8px; background: #f8f8fc; border-radius: 6px; white-space: pre-wrap; }
+        .note-card-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .note-card-meta { font-size: 9px; color: #aaa; margin-top: 6px; }
+        .note-shared-badge { font-size: 9px; color: #16a34a; background: #f0fdf4; padding: 2px 8px; border-radius: 4px; display: inline-block; border: 1px solid #bbf7d0; }
+        .note-empty { text-align: center; padding: 30px; color: #aaa; font-size: 11px; }
+
+        .share-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+        .share-modal-content { background: #fff; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+        .share-modal-content h3 { color: #7c3aed; margin-bottom: 12px; font-size: 14px; letter-spacing: 0.5px; }
+        .share-modal-content select { width: 100%; padding: 10px; margin-bottom: 12px; background: #f8f8fc; border: 1px solid #e0e0e8; border-radius: 6px; color: #1a1a2e; font-family: 'Inter', sans-serif; font-size: 12px; }
+        .share-modal-content select option { background: #fff; }
+        .edit-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+        .edit-modal-content { background: #fff; padding: 24px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+        .edit-modal-content h3 { color: #7c3aed; margin-bottom: 12px; font-size: 14px; letter-spacing: 0.5px; }
+        .edit-modal-content input, .edit-modal-content textarea { width: 100%; padding: 10px; margin-bottom: 8px; background: #f8f8fc; border: 1px solid #e0e0e8; border-radius: 6px; color: #1a1a2e; font-family: 'Inter', sans-serif; font-size: 12px; outline: none; }
+        .edit-modal-content textarea { min-height: 80px; resize: vertical; }
+        .edit-modal-content .modal-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+
+        .notification { position: fixed; top: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; font-size: 11px; font-family: 'Inter', sans-serif; z-index: 9999; opacity: 0; transform: translateY(-20px); transition: all 0.3s; }
+        .notification.show { opacity: 1; transform: translateY(0); }
+        .notification-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .notification-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+        /* Cribs table */
+        .crib-table { width:100%; border-collapse:collapse; font-size:11px; }
+        .crib-table th { background:#f4f4f8; color:#7c3aed; padding:8px 6px; text-align:left; font-weight:600; letter-spacing:0.3px; cursor:pointer; white-space:nowrap; border-bottom:2px solid #e8e8ef; user-select:none; }
+        .crib-table th:hover { background:#eeeef5; }
+        .crib-table th .sort-arrow { margin-left:4px; font-size:8px; color:#7c3aed; }
+        .crib-table td { padding:6px; border-bottom:1px solid #f0f0f5; color:#444; vertical-align:middle; }
+        .crib-table tr:hover td { background:rgba(124,58,237,0.02); }
+        .crib-table .cell-editable { cursor:text; border-radius:4px; padding:2px 4px; min-width:30px; transition:background 0.15s; }
+        .crib-table .cell-editable:hover { background:rgba(124,58,237,0.06); }
+        .crib-table .cell-editable:focus { background:rgba(124,58,237,0.1); outline:1px solid #7c3aed; }
+        .crib-table .cell-voice { max-height:60px; overflow-y:auto; display:block; white-space:pre-wrap; }
+        .crib-table .cell-select { padding:2px 4px; background:#fff; border:1px solid #e0e0e8; border-radius:4px; color:#1a1a2e; font-family:'Inter',sans-serif; font-size:11px; cursor:pointer; }
+        .crib-table .cell-select option { background:#fff; }
+        .crib-table .btn-crib-chat { background:rgba(124,58,237,0.08); border:1px solid rgba(124,58,237,0.2); color:#7c3aed; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:10px; font-family:'Inter',sans-serif; transition:background 0.15s; }
+        .crib-table .btn-crib-chat:hover { background:rgba(124,58,237,0.15); }
+        .crib-table .btn-crib-del { background:transparent; border:none; color:#ef4444; cursor:pointer; font-size:12px; padding:2px 6px; border-radius:4px; }
+        .crib-table .btn-crib-del:hover { background:rgba(239,68,68,0.1); }
+        .prio-alta { color:#ef4444; font-weight:600; }
+        .prio-media { color:#f59e0b; }
+        .prio-baja { color:#888; }
+        .status-vip { color:#f59e0b; font-weight:600; }
+        .status-activo { color:#16a34a; }
+        .status-nuevo { color:#3b82f6; }
+        .status-frio { color:#94a3b8; }
+        .status-inactivo { color:#64748b; }
+
+        /* CRIBS OVERLAY — historial por cliente */
+        .cribs-overlay {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;
+            backdrop-filter: blur(4px);
+        }
+        .cribs-overlay.show { display:flex; }
+        .cribs-overlay-panel {
+            background:#fff; border-radius:16px; width:92vw; max-width:1200px; max-height:90vh;
+            box-shadow:0 8px 40px rgba(0,0,0,0.25); display:flex; flex-direction:column;
+            overflow:hidden; animation:fadeIn 0.25s ease-out;
+        }
+        @keyframes fadeIn { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
+        .cribs-overlay-header {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:16px 24px; border-bottom:2px solid #f0f0f5; flex-shrink:0;
+        }
+        .cribs-overlay-header h2 {
+            font-size:16px; font-weight:800; color:#7c3aed; letter-spacing:0.5px;
+        }
+        .cribs-overlay-header .close-btn {
+            width:32px; height:32px; border-radius:50%; border:none; background:#f4f4f8;
+            color:#888; cursor:pointer; font-size:18px; display:flex; align-items:center;
+            justify-content:center; transition:all 0.15s;
+        }
+        .cribs-overlay-header .close-btn:hover { background:#ef4444; color:#fff; }
+        .cribs-overlay-body {
+            flex:1; overflow-y:auto; padding:16px 24px;
+            display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+            gap:14px; align-content:start;
+        }
+        .cribs-overlay-body::-webkit-scrollbar { width:6px; }
+        .cribs-overlay-body::-webkit-scrollbar-track { background:#f4f4f8; }
+        .cribs-overlay-body::-webkit-scrollbar-thumb { background:#d0d0d8; border-radius:3px; }
+        .crib-client-card {
+            background:#fafafc; border:1px solid #eeeef4; border-radius:12px;
+            padding:14px 16px; transition:box-shadow 0.2s; display:flex; flex-direction:column; gap:8px;
+        }
+        .crib-client-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.06); }
+        .crib-client-card .cc-header {
+            display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+        }
+        .crib-client-card .cc-name {
+            font-size:13px; font-weight:700; color:#1a1a2e;
+        }
+        .crib-client-card .cc-id {
+            font-size:10px; color:#c4b5fd; font-weight:600; font-family:'JetBrains Mono',monospace;
+        }
+        .crib-client-card .cc-priority { font-size:9px; padding:2px 8px; border-radius:4px; font-weight:600; }
+        .crib-client-card .cc-status { font-size:9px; padding:2px 8px; border-radius:4px; font-weight:600; }
+        .crib-client-card .cc-details {
+            display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; font-size:10px; color:#555;
+        }
+        .crib-client-card .cc-details .label { color:#888; }
+        .crib-client-card .cc-value { color:#1a1a2e; font-weight:500; }
+        .crib-client-card .cc-notes-title {
+            font-size:10px; font-weight:600; color:#7c3aed; margin-top:4px;
+        }
+        .crib-client-card .cc-note {
+            font-size:10px; color:#555; padding:6px 8px; background:#fff; border-radius:6px;
+            border:1px solid #f0f0f5; margin-top:4px; line-height:1.4;
+        }
+        .crib-client-card .cc-quick-notes {
+            font-size:10px; color:#666; padding:6px 8px; background:#fefce8; border-radius:6px;
+            border:1px solid #fde68a; font-style:italic;
+        }
+        .crib-client-card .cc-empty { font-size:10px; color:#aaa; }
+        .crib-client-card .cc-last-contact { font-size:9px; color:#888; margin-top:2px; }
+        .crib-client-card .cc-actions { display:flex; gap:6px; margin-top:4px; }
+        .crib-client-card .cc-actions button {
+            padding:4px 10px; border:none; border-radius:4px; font-size:9px; font-weight:600;
+            cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s;
+        }
+        .crib-client-card .cc-actions .btn-chat {
+            background:rgba(124,58,237,0.08); color:#7c3aed; border:1px solid rgba(124,58,237,0.2);
+        }
+        .crib-client-card .cc-actions .btn-chat:hover { background:rgba(124,58,237,0.15); }
+
+        @media (max-width: 700px) {
+            .sidebar { width: 56px; }
+            .sidebar .nav-item span { display: none; }
+            .sidebar .nav-item { justify-content: center; padding: 12px; }
+            .note-form .form-row { flex-direction: column; }
+        }
+        .cribs-tab { padding:6px 14px;border:1px solid #3b3b5c;background:transparent;color:#8888aa;border-radius:6px;cursor:pointer;font-size:11px;font-family:'Inter',sans-serif;transition:all 0.2s; }
+        .cribs-tab:hover { background:rgba(196,181,253,0.1);color:#c4b5fd;border-color:#c4b5fd; }
+        .cribs-tab.active { background:rgba(196,181,253,0.15);color:#c4b5fd;border-color:#c4b5fd;font-weight:600; }
+        .cartas-table { width:100%;border-collapse:collapse;font-size:11px; }
+        .cartas-table th { text-align:left;padding:8px 10px;border-bottom:1px solid #3b3b5c;color:#8888aa;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px; }
+        .cartas-table td { padding:8px 10px;border-bottom:1px solid #2a2a45;color:#ccccee;vertical-align:top; }
+        .cartas-table .cartas-content { max-height:80px;overflow-y:auto;white-space:pre-wrap;font-size:10px;color:#aaaac8;line-height:1.4; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <button class="btn btn-primary" id="btn-open-bot">ABRIR BOT PANEL</button>
+            <button class="btn btn-secondary" id="btn-admin" style="display:none;">ADMIN PANEL</button>
+        </div>
+        <div class="top-bar-right">
+            <button class="btn btn-danger" id="btn-logout">CERRAR SESIÓN</button>
+        </div>
+    </div>
+    <div class="layout">
+        <div class="sidebar">
+            <div class="nav-item active" data-view="dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                <span>DASHBOARD</span>
+            </div>
+            <div class="nav-item" data-view="notes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                <span>NOTAS</span>
+            </div>
+            <div class="nav-item" data-view="cribs">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                <span>CRIBS</span>
+            </div>
+        </div>
+        <div class="main-content">
+            <!-- View: Dashboard -->
+            <div class="view active" id="view-dashboard">
+                <div class="dash-container">
+                    <div class="logo spin">
+                        <img src="/dist/assets/tesseract-logo.svg" alt="TESSERACT" style="width:100%;height:auto;display:block;">
+                    </div>
+
+                    <p class="subtitle">DASHBOARD</p>
+                    <div class="info" id="user-info">Cargando...</div>
+                    <div class="status-badge" id="status-badge">--</div>
+                    <div class="time-remaining" id="time-remaining"></div>
+                    <div class="footer">v24.0 &mdash; 2026 TESSERACT</div>
+                </div>
+            </div>
+
+            <!-- View: CRIBS -->
+            <div class="view" id="view-cribs">
+                <div class="notes-header">
+                    <h2>CRIBS</h2>
+                    <button class="btn-notes" id="btn-back-dash-cribs">VOLVER AL DASHBOARD</button>
+                </div>
+
+                <div class="cribs-tabs" style="display:flex;gap:4px;margin-bottom:12px;">
+                    <button class="cribs-tab active" data-cribs-tab="all">📋 Todos</button>
+                    <button class="cribs-tab" data-cribs-tab="cartas">📬 Cartas</button>
+                </div>
+
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+                    <input type="text" id="crib-add-id" placeholder="ID del usuario" style="flex:1;min-width:140px;padding:8px 12px;background:#f8f8fc;border:1px solid #e0e0e8;border-radius:6px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:12px;outline:none;">
+                    <button class="btn-notes btn-notes-sm" id="btn-crib-add">➕ AGREGAR A CRIBS</button>
+                    <button class="btn-notes btn-notes-outline btn-notes-sm" id="btn-crib-open-table">📊 ABRIR TABLA CRIBS</button>
+                </div>
+
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+                    <input type="text" id="crib-search" placeholder="Buscar por ID, nombre, pa\u00eds, intereses o notas..." style="flex:1;min-width:180px;padding:8px 12px;background:#f8f8fc;border:1px solid #e0e0e8;border-radius:6px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:12px;outline:none;">
+                    <select id="crib-filter-status" style="padding:8px 12px;background:#f8f8fc;border:1px solid #e0e0e8;border-radius:6px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:12px;"><option value="">Status</option><option>Nuevo</option><option>Activo</option><option>VIP</option><option>Frio</option><option>Inactivo</option></select>
+                    <select id="crib-filter-priority" style="padding:8px 12px;background:#f8f8fc;border:1px solid #e0e0e8;border-radius:6px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:12px;"><option value="">Prioridad</option><option>Alta</option><option>Media</option><option>Baja</option></select>
+                    <span id="crib-count" style="font-size:10px;color:#888;"></span>
+                </div>
+
+                <div id="crib-table-container" style="overflow-x:auto;">
+                    <div id="crib-table-placeholder" style="text-align:center;padding:30px;color:#aaa;font-size:12px;">Cargando CRIBS...</div>
+                </div>
+            </div>
+
+            <!-- View: Notes -->
+            <div class="view" id="view-notes">
+                <div class="notes-header">
+                    <h2>NOTAS</h2>
+                    <button class="btn-notes" id="btn-back-dash">VOLVER AL DASHBOARD</button>
+                </div>
+                <div class="notes-tabs">
+                    <button class="notes-tab active" data-tab="my-notes">MIS NOTAS</button>
+                    <button class="notes-tab" data-tab="shared-notes">COMPARTIDAS</button>
+                </div>
+                <div class="notes-tab-content active" id="tab-my-notes">
+                    <div class="note-form">
+                        <div class="form-row">
+                            <input type="text" id="note-profile-name" placeholder="Perfil">
+                            <input type="text" id="note-client-name" placeholder="Nombre del cliente">
+                            <input type="text" id="note-client-id" placeholder="ID del cliente">
+                        </div>
+                        <textarea id="note-text" placeholder="Escribe tu nota aqui..."></textarea>
+                        <button class="btn-notes" id="btn-save-note">GUARDAR NOTA</button>
+                    </div>
+                    <div id="my-notes-list"></div>
+                </div>
+                <div class="notes-tab-content" id="tab-shared-notes">
+                    <div id="shared-notes-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div class="share-modal" id="share-modal">
+        <div class="share-modal-content">
+            <h3>COMPARTIR NOTA</h3>
+            <p style="font-size:11px;color:#888;margin-bottom:12px;">Selecciona un usuario de la extensión para compartir esta nota:</p>
+            <select id="share-user-select" style="width:100%;padding:10px;margin-bottom:12px;background:#f8f8fc;border:1px solid #e0e0e8;border-radius:6px;color:#1a1a2e;font-family:'Inter',sans-serif;font-size:12px;">
+                <option value="">Cargando usuarios...</option>
+            </select>
+            <div class="modal-buttons">
+                <button class="btn-notes btn-notes-outline btn-notes-sm" id="btn-cancel-share">CANCELAR</button>
+                <button class="btn-notes btn-notes-sm" id="btn-confirm-share">COMPARTIR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="edit-modal" id="edit-modal">
+        <div class="edit-modal-content">
+            <h3>EDITAR NOTA</h3>
+            <input type="text" id="edit-profile-name" placeholder="Perfil">
+            <input type="text" id="edit-client-name" placeholder="Nombre del cliente">
+            <input type="text" id="edit-client-id" placeholder="ID del cliente">
+            <textarea id="edit-note-text" placeholder="Escribe tu nota aqui..."></textarea>
+            <div class="modal-buttons">
+                <button class="btn-notes btn-notes-outline btn-notes-sm" id="btn-cancel-edit">CANCELAR</button>
+                <button class="btn-notes btn-notes-sm" id="btn-confirm-edit">GUARDAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CRIBS OVERLAY -->
+    <div class="cribs-overlay" id="cribs-overlay">
+        <div class="cribs-overlay-panel">
+            <div class="cribs-overlay-header">
+                <h2>📊 CRIBS — Historial de Clientes</h2>
+                <button class="close-btn" id="btn-cribs-overlay-close">✕</button>
+            </div>
+            <div class="cribs-overlay-body" id="cribs-overlay-body">
+                <div style="text-align:center;padding:40px;color:#aaa;grid-column:1/-1;">Cargando...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script src="/dist/modules/error-handler.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
